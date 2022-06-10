@@ -1,6 +1,7 @@
-apply plugin: 'com.github.dcendents.android-maven'
+//apply plugin: 'com.github.dcendents.android-maven'
+apply plugin: 'maven'
 apply plugin: 'com.jfrog.bintray'
-group = GROUP
+group = rootProject.ext.mavenGroupId
 version = VERSION_NAME
 
 
@@ -42,13 +43,6 @@ artifacts {
     archives sourcesJar
 }
 
-uploadArchives {
-    repositories.mavenDeployer {
-        repository(url: repositoryUrl) {
-            authentication(userName: getPropertyFromLocalProperties("USER"), password: getPropertyFromLocalProperties("PASSWORD"))
-        }
-    }
-}
 bintray {
     user = getPropertyFromLocalProperties("bintray.user")
     key = getPropertyFromLocalProperties("bintray.apikey")
@@ -61,5 +55,28 @@ bintray {
         websiteUrl = 'http://tech.meituan.com/android_autopatch.html'
         vcsUrl = 'https://github.com/Meituan-Dianping/Robust'
         publish = true
+    }
+}
+
+//uploadArchives {
+//    repositories.mavenDeployer {
+//        repository(url: repositoryUrl) {
+//            authentication(userName: getPropertyFromLocalProperties("USER"), password: getPropertyFromLocalProperties("PASSWORD"))
+//        }
+//    }
+//}
+// 上传至内网maven仓库
+uploadArchives {
+    repositories {
+        mavenDeployer {
+            repository(url: rootProject.ext.mavenGlobalUrl) {
+                authentication(userName: rootProject.ext.mavenName, password: rootProject.ext.mavenPwd)
+            }
+//            pom.project {
+//                groupId rootProject.ext.mavenGroupId
+//                artifactId "robust"
+//                version "0.4.100"
+//            }
+        }
     }
 }

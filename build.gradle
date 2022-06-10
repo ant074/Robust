@@ -4,9 +4,10 @@ buildscript {
     repositories {
         mavenLocal()
         jcenter()
+        google()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.1.0'
+        classpath 'com.android.tools.build:gradle:4.0.1'
         // NOTE: Do not place your application dependencies here; they belong
         // in the individual module build.gradle files
         classpath 'com.meituan.robust:gradle-plugin:0.4.96'
@@ -28,10 +29,18 @@ allprojects {
             url "http://depot.sankuai.com/nexus/content/groups/public/"
         }
         jcenter()
+        google()
     }
     tasks.withType(JavaCompile) { options.encoding = "UTF-8" }
 }
 
 task clean(type: Delete) {
     delete rootProject.buildDir
+}
+
+ext {
+    mavenGlobalUrl = "http://192.168.3.241:8081/repository/maven-releases/"
+    mavenGroupId = "me.ddkj.lib"
+    mavenName = "admin"
+    mavenPwd = "xxxxx" //请参考lib_common
 }
