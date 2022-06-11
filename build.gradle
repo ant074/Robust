@@ -42,5 +42,5 @@ ext {
     mavenGlobalUrl = "http://192.168.3.241:8081/repository/maven-releases/"
     mavenGroupId = "me.ddkj.lib"
     mavenName = "admin"
-    mavenPwd = "xxxxx" //请参考lib_common
+    mavenPwd = "xxxx" //请参考lib_common
 }

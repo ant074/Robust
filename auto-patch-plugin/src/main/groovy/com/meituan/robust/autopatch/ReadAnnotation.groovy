@@ -30,11 +30,13 @@ class ReadAnnotation {
         box.forEach {
             ctclass ->
                 try {
-                    boolean isNewlyAddClass = scanClassForAddClassAnnotation(ctclass);
-                    //newly add class donnot need scann for modify
-                    if (!isNewlyAddClass) {
-                        patchMethodSignureSet.addAll(scanClassForModifyMethod(ctclass));
-                        scanClassForAddMethodAnnotation(ctclass);
+                    if(!"META-INF.versions.9.module-info".equals(ctclass.name)) {
+                        boolean isNewlyAddClass = scanClassForAddClassAnnotation(ctclass);
+                        //newly add class donnot need scann for modify
+                        if (!isNewlyAddClass) {
+                            patchMethodSignureSet.addAll(scanClassForModifyMethod(ctclass));
+                            scanClassForAddMethodAnnotation(ctclass);
+                        }
                     }
                 } catch (NullPointerException e) {
                     logger.warn("something wrong when readAnnotation, " + e.getMessage() + " cannot find class name " + ctclass.name)
