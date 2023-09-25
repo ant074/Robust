@@ -126,7 +126,10 @@ public class AsmInsertImpl extends InsertcodeStrategy {
 
         private boolean isQualifiedMethod(int access, String name, String desc, Map<String, Boolean> c) {
             //类初始化函数和构造函数过滤
-            if (AsmUtils.CLASS_INITIALIZER.equals(name) || AsmUtils.CONSTRUCTOR.equals(name)) {
+//            if (AsmUtils.CLASS_INITIALIZER.equals(name) || AsmUtils.CONSTRUCTOR.equals(name)) {
+//                return false;
+//            }
+            if ("<clinit>".equals(name) || "<init>".equals(name)) {
                 return false;
             }
             //@warn 这部分代码请重点review一下，判断条件写错会要命

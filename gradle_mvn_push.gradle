@@ -75,7 +75,7 @@ uploadArchives {
 //            pom.project {
 //                groupId rootProject.ext.mavenGroupId
 //                artifactId "robust"
-//                version "0.4.100"
+//                version VERSION_NAME
 //            }
         }
     }

@@ -59,7 +59,7 @@ class RobustTransform extends Transform implements Plugin<Project> {
             }
             if (!isDebugTask) {
                 project.android.registerTransform(this)
-                project.afterEvaluate(new RobustApkHashAction())
+//                project.afterEvaluate(new RobustApkHashAction())
                 logger.quiet "Register robust transform successful !!!"
             }
             if (null != robust.switch.turnOnRobust && !"true".equals(String.valueOf(robust.switch.turnOnRobust))) {
@@ -67,7 +67,7 @@ class RobustTransform extends Transform implements Plugin<Project> {
             }
         } else {
             project.android.registerTransform(this)
-            project.afterEvaluate(new RobustApkHashAction())
+//            project.afterEvaluate(new RobustApkHashAction())
         }
     }
 
@@ -139,11 +139,23 @@ class RobustTransform extends Transform implements Plugin<Project> {
     }
 
 
+    /**
+     * 操作了字节码后，要让新的字节码输出到某个jar文件中，如果注册了Transform，必须指定输出目录，否则后续编译无法执行
+     * @param context
+     * @param inputs TransformInput 持有class和jar完整路径的类
+     * @param referencedInputs
+     * @param outputProvider 用于获取输出路径
+     * @param isIncremental
+     * @throws IOException
+     * @throws TransformException
+     * @throws InterruptedException
+     */
     @Override
     void transform(Context context, Collection<TransformInput> inputs, Collection<TransformInput> referencedInputs, TransformOutputProvider outputProvider, boolean isIncremental) throws IOException, TransformException, InterruptedException {
         logger.quiet '================robust start================'
         def startTime = System.currentTimeMillis()
         outputProvider.deleteAll()
+        // 获取输出路径，Format.JAR代表class会输入到jar文件中
         File jarFile = outputProvider.getContentLocation("main", getOutputTypes(), getScopes(),
                 Format.JAR);
         if(!jarFile.getParentFile().exists()){
@@ -153,11 +165,12 @@ class RobustTransform extends Transform implements Plugin<Project> {
             jarFile.delete();
         }
 
+        // 在用classPool创建class时，可以从路径中找到这个class(android的class)，比如TextView是属于android.jar里面的，这是属于asm|javassist的用法
         ClassPool classPool = new ClassPool()
         project.android.bootClasspath.each {
             classPool.appendClassPath((String) it.absolutePath)
         }
-
+        // 将所有输入的class全类名全部放入到box集合中
         def box = ConvertUtils.toCtClasses(inputs, classPool)
         def cost = (System.currentTimeMillis() - startTime) / 1000
 //        logger.quiet "check all class cost $cost second, class count: ${box.size()}"
@@ -181,6 +194,11 @@ class RobustTransform extends Transform implements Plugin<Project> {
         logger.quiet '================robust   end================'
     }
 
+    /**
+     * 最后将全方法名写入到methodsMap.robust中
+     * @param map
+     * @param path
+     */
     private void writeMap2File(Map map, String path) {
         File file = new File(project.buildDir.path + path);
         if (!file.exists() && (!file.parentFile.mkdirs() || !file.createNewFile())) {

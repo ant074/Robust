@@ -1,14 +1,14 @@
 apply plugin: 'groovy'
 compileGroovy {
-    sourceCompatibility = 1.7
-    targetCompatibility = 1.7
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
 }
 
 dependencies {
     implementation  gradleApi()
     implementation  localGroovy()
     implementation  'com.android.tools.build:gradle:4.0.1'
-    implementation  'org.javassist:javassist:3.27.0-GA'
+    implementation  'org.javassist:javassist:3.29.0-GA'
 //    compile 'com.meituan.robust:autopatchbase:' + VERSION_NAME
     implementation  project(':autopatchbase')
 }

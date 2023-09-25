@@ -97,10 +97,23 @@ class PatchesFactory {
                             @Override
                             void edit(NewExpr e) throws CannotCompileException {
                                 //inner class in the patched class ,not all inner class
-                                if (Config.newlyAddedClassNameList.contains(e.getClassName()) || Config.noNeedReflectClassSet.contains(e.getClassName())) {
+//                                if (Config.newlyAddedClassNameList.contains(e.getClassName()) || Config.noNeedReflectClassSet.contains(e.getClassName())) {
+//                                    return;
+//                                }
+                                if (Config.noNeedReflectClassSet.contains(e.getClassName())) {
                                     return;
                                 }
-
+                                //add的类实例化，不能用反射，新加类的类加载是额外的，class.forName的双亲委托是找不到的
+                                if (Config.newlyAddedClassNameList.contains(e.getClassName())) {
+                                    //静态方法中无法访问到this，直接return
+                                    if (ReflectUtils.isStatic(method.getModifiers())) {
+                                        return;
+                                    } else {
+                                        //非静态方法中实例化需要替换this。
+                                        e.replace(ReflectUtils.instanceReplaceThis())
+                                        return;
+                                    }
+                                }
                                 try {
                                     if (!ReflectUtils.isStatic(Config.classPool.get(e.getClassName()).getModifiers()) && JavaUtils.isInnerClassInModifiedClass(e.getClassName(), modifiedClass)) {
                                         e.replace(ReflectUtils.getNewInnerClassString(e.getSignature(), temPatchClass.getName(), ReflectUtils.isStatic(Config.classPool.get(e.getClassName()).getModifiers()), getClassValue(e.getClassName())));
@@ -218,14 +231,14 @@ class PatchesFactory {
         return targetClass;
     }
 
-    public
+    //生成patch类，先给patch类添加原类所有方法，但排查exceptMethodList这些方法，也就是最后添加只有modify的方法
     static CtClass cloneClass(CtClass sourceClass, String patchName, List<CtMethod> exceptMethodList) throws CannotCompileException, NotFoundException {
         CtClass targetClass = Config.classPool.getOrNull(patchName);
         if (targetClass != null) {
             targetClass.defrost();
         }
         targetClass = Config.classPool.makeClass(patchName);
-        targetClass.getClassFile().setMajorVersion(ClassFile.JAVA_7);
+        targetClass.getClassFile().setMajorVersion(ClassFile.JAVA_8);
         //warning 所有的super问题均在assist class来处理,
         targetClass.setSuperclass(sourceClass.getSuperclass());
         for (CtField field : sourceClass.getDeclaredFields()) {
@@ -315,19 +328,24 @@ class PatchesFactory {
     public
     static void createPublicMethodForPrivate(CtClass ctClass) throws CannotCompileException, NotFoundException {
         //内联的方法是private,需要转为public
+        System.out.println("createPublicMethodForPrivate 1")
         List<CtMethod> privateMethodList = new ArrayList<>();
         for (CtMethod method : ctClass.getDeclaredMethods()) {
             if (AccessFlag.isPrivate(method.getModifiers())) {
                 privateMethodList.add(method);
             }
         }
+        System.out.println("createPublicMethodForPrivate 2")
         StringBuilder private2PublicMethod;
         for (CtMethod method : privateMethodList) {
             private2PublicMethod = new StringBuilder();
-            private2PublicMethod.append("public  " + getMethodStatic(method) + " " + method.getReturnType().getName() + " " + Constants.ROBUST_PUBLIC_SUFFIX + method.getName() + "(" + JavaUtils.getParameterSignure(method) + "){");
-            private2PublicMethod.append("return " + method.getName() + "(" + JavaUtils.getParameterValue(method.getParameterTypes().length) + ");");
+            String methodName= method.getName()
+            private2PublicMethod.append("public  " + getMethodStatic(method) + " " + method.getReturnType().getName() + " " + Constants.ROBUST_PUBLIC_SUFFIX + methodName + "(" + JavaUtils.getParameterSignure(method) + "){");
+            private2PublicMethod.append("return " + methodName + "(" + JavaUtils.getParameterValue(method.getParameterTypes().length) + ");");
             private2PublicMethod.append("}");
+            System.out.println("createPublicMethodForPrivate 3："+private2PublicMethod.toString())
             ctClass.addMethod(CtMethod.make(private2PublicMethod.toString(), ctClass));
+            System.out.println("createPublicMethodForPrivate 4")
         }
 
     }

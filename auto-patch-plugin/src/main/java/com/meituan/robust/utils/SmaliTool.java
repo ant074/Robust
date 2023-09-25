@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Matcher;
 
@@ -46,11 +47,15 @@ public class SmaliTool {
     }
 
     public void dealObscureInSmali() {
-        File diretory = new File(Config.robustGenerateDirectory + "classout" + File.separator + Config.patchPackageName.replaceAll("\\.", Matcher.quoteReplacement(File.separator)));
+        File diretory = new File(Config.robustGenerateDirectory + "classout" + File.separator +
+                Config.patchPackageName.replaceAll("\\.", Matcher.quoteReplacement(File.separator)));
         if (!diretory.isDirectory() || diretory == null) {
-            throw new RuntimeException(Config.robustGenerateDirectory + Config.patchPackageName.replaceAll(".", Matcher.quoteReplacement(File.separator)) + " contains no smali file error!! ");
+            throw new RuntimeException(Config.robustGenerateDirectory +
+                    Config.patchPackageName.replaceAll(".", Matcher.quoteReplacement(File.separator)) +
+                    " contains no smali file error!! ");
         }
-        List<File> smaliFileList = covertPathToFile(Config.robustGenerateDirectory + "classout" + File.separator, Config.newlyAddedClassNameList);
+        List<File> smaliFileList = covertPathToFile(Config.robustGenerateDirectory + "classout" + File.separator,
+                Config.newlyAddedClassNameList);
         for (File file : diretory.listFiles()) {
             smaliFileList.add(file);
         }
@@ -157,29 +162,31 @@ public class SmaliTool {
                 packageNameIndex = result.indexOf(packageNameList.get(index));
             }
 
-            //invoke-virtual {v0, v5, v6, p0}, Landroid/support/v4/app/LoaderManager;->initLoader(ILandroid/os/Bundle;Landroid/support/v4/app/bi;)Landroid/support/v4/content/Loader;
-            if (result.contains("invoke") &&
-                    (packageNameIndex + packageNameList.get(index).length() + 3 < result.length()) &&
-                    result.substring(packageNameIndex + packageNameList.get(index).length() + 1, packageNameIndex + packageNameList.get(index).length() + 3).equals("->")) {
+            //invoke-virtual {v0, v5, v6, p0}, Landroid/support/v4/app/LoaderManager;->initLoader(ILandroid/os/Bundle;
+            // Landroid/support/v4/app/bi;)Landroid/support/v4/content/Loader;
+            if (result.contains("invoke") && (packageNameIndex + packageNameList.get(index).length() + 3 < result.length()) &&
+                    result.substring(packageNameIndex + packageNameList.get(index).length() + 1,
+                            packageNameIndex + packageNameList.get(index).length() + 3).equals("->")) {
                 //方法调用的替换
                 result = result.replace(
                         result.substring(packageNameIndex + packageNameList.get(index).length() + 3, result.indexOf(")") + 1),
                         getObscuredMethodSignure(result.substring(packageNameIndex + packageNameList.get(index).length() + 3),
-                                packageNameList.get(index).replaceAll("/", "\\."))
-                );
-            } else if (result.contains("->") && (result.indexOf("(") == -1) && ((packageNameIndex + packageNameList.get(index).length() + 3) < result.length())) {
+                                packageNameList.get(index).replaceAll("/", "\\.")));
+            } else if (result.contains("->") && (result.indexOf("(") == -1) &&
+                    ((packageNameIndex + packageNameList.get(index).length() + 3) < result.length())) {
                 // 字段处理
                 //sget-object v4, Lcom/sankuai/meituan/fingerprint/FingerprintConfig;->accelerometerInfoList:Ljava/util/List;
-                String fieldName = result.substring(packageNameIndex + packageNameList.get(index).length() + 3, result.lastIndexOf(":"));
+                String fieldName = result.substring(packageNameIndex + packageNameList.get(index).length() + 3,
+                        result.lastIndexOf(":"));
                 // 前后都加上 "->" 是为了避免类名中包含字段名时，类名被误修改导致patch生成错误
-                result = result.replaceFirst("->" + fieldName, "->" + getObscuredMemberName(packageNameList.get(index).replaceAll("/", "\\."), fieldName));
+                result = result.replaceFirst("->" + fieldName,
+                        "->" + getObscuredMemberName(packageNameList.get(index).replaceAll("/", "\\."), fieldName));
             }
         }
 
         // 处理@Add新增类的方法名混淆
         if (Config.newlyAddedClassNameList.contains(fullClassName)) {
-            if (result.startsWith(".method ") &&
-                    !result.contains("constructor <init>") &&
+            if (result.startsWith(".method ") && !result.contains("constructor <init>") &&
                     !result.contains("constructor <clinit>")) {
                 System.out.println("new Add class: line = " + line);
                 //.method public onFailure(Lcom/bytedance/retrofit2/Call;Ljava/lang/Throwable;)V
@@ -211,11 +218,17 @@ public class SmaliTool {
         }
         String result = line;
         String returnType;
-        List<CtMethod> invokeSuperMethodList = invokeSuperMethodMap.get(NameManger.getInstance().getPatchNameMap().get(fullClassName));
-        if (isInStaticRobustMethod && line.contains(Constants.SMALI_INVOKE_VIRTUAL_COMMAND)) {
+        List<CtMethod> invokeSuperMethodList = invokeSuperMethodMap.get(
+                NameManger.getInstance().getPatchNameMap().get(fullClassName));
+        if (invokeSuperMethodList != null && isInStaticRobustMethod && line.contains(Constants.SMALI_INVOKE_VIRTUAL_COMMAND)) {
             for (CtMethod ctMethod : invokeSuperMethodList) {
+                if (ctMethod == null) {
+                    continue;
+                }
                 //java method signure
-                if ((ctMethod.getName().replaceAll("\\.", "/") + ctMethod.getSignature().subSequence(0, ctMethod.getSignature().indexOf(")") + 1)).equals(getMethodSignureInSmaliLine(line))) {
+                if ((ctMethod.getName().replaceAll("\\.", "/") +
+                        ctMethod.getSignature().subSequence(0, ctMethod.getSignature().indexOf(")") + 1)).equals(
+                        getMethodSignureInSmaliLine(line))) {
                     result = line.replace(Constants.SMALI_INVOKE_VIRTUAL_COMMAND, Constants.SMALI_INVOKE_SUPER_COMMAND);
                     try {
                         if (!ctMethod.getReturnType().isPrimitive()) {
@@ -226,8 +239,14 @@ public class SmaliTool {
                         if (NameManger.getInstance().getPatchNameMap().get(fullClassName).equals(fullClassName)) {
                             result = result.replace("p0", "p1");
                         }
-                        String fullClassNameInSmali = ctMethod.getDeclaringClass().getClassPool().get(fullClassName).getSuperclass().getName().replaceAll("\\.", "/");
-                        result = result.replace(result.substring(result.indexOf(PACKNAME_START) + 1, result.indexOf(PACKNAME_END)), fullClassNameInSmali);
+                        String fullClassNameInSmali = ctMethod.getDeclaringClass()
+                                .getClassPool()
+                                .get(fullClassName)
+                                .getSuperclass()
+                                .getName()
+                                .replaceAll("\\.", "/");
+                        result = result.replace(result.substring(result.indexOf(PACKNAME_START) + 1, result.indexOf(PACKNAME_END)),
+                                fullClassNameInSmali);
                         result = result.substring(0, result.indexOf(")") + 1) + returnType;
                         if (!ctMethod.getReturnType().isPrimitive()) {
                             result += ";";
@@ -241,7 +260,7 @@ public class SmaliTool {
         if (isInStaticRobustMethod && line.startsWith(".end method")) {
             isInStaticRobustMethod = false;
         }
-//        System.out.println("  result is    " + result);
+        //        System.out.println("  result is    " + result);
         return result;
     }
 
@@ -260,7 +279,8 @@ public class SmaliTool {
             startIndex = 0;
             for (; ; ) {
                 startIndex = line.indexOf(Constants.PACKNAME_START, startIndex + 1);
-                if (startIndex < 0 || !Character.isLetter(line.charAt(startIndex - 1)) || line.lastIndexOf(Constants.PACKNAME_START) == startIndex) {
+                if (startIndex < 0 || !Character.isLetter(line.charAt(startIndex - 1)) ||
+                        line.lastIndexOf(Constants.PACKNAME_START) == startIndex) {
                     break;
                 }
             }
@@ -272,20 +292,23 @@ public class SmaliTool {
             line = line.substring(endIndex);
         }
 
-//        if (packageNameList.size() > 0)
-//            System.out.println("getPackNameFromSmaliLine  " + packageNameList);
+        //        if (packageNameList.size() > 0)
+        //            System.out.println("getPackNameFromSmaliLine  " + packageNameList);
         return packageNameList;
 
     }
 
     public static void main(String[] args) {
         SmaliTool smaliUitils = new SmaliTool();
-        smaliUitils.getObscuredMethodSignure("invokeReflectConstruct(Ljava/lang/String;[Ljava/lang/Object;[Ljava/lang/Class;)Ljava/lang/Object;", "com.meituan.second");
+        smaliUitils.getObscuredMethodSignure(
+                "invokeReflectConstruct(Ljava/lang/String;[Ljava/lang/Object;[Ljava/lang/Class;)Ljava/lang/Object;",
+                "com.meituan.second");
     }
 
     private String getObscuredMethodSignure(final String line, String className) {
 
-        if (className.endsWith(Constants.PATCH_SUFFIX) && Config.modifiedClassNameList.contains(className.substring(0, className.indexOf(Constants.PATCH_SUFFIX)))) {
+        if (className.endsWith(Constants.PATCH_SUFFIX) &&
+                Config.modifiedClassNameList.contains(className.substring(0, className.indexOf(Constants.PATCH_SUFFIX)))) {
             className = className.substring(0, className.indexOf(Constants.PATCH_SUFFIX));
         }
         StringBuilder methodSignureBuilder = new StringBuilder();
@@ -296,8 +319,10 @@ public class SmaliTool {
         //invokeReflectConstruct(Ljava/lang/String;[Ljava/lang/Object;[Ljava/lang/Class;)Ljava/lang/Object;
         boolean isArray = false;
         for (int index = line.indexOf("(") + 1; index < endIndex; index++) {
-            if (Constants.PACKNAME_START.equals(String.valueOf(methodSigure.charAt(index))) && methodSigure.contains(Constants.PACKNAME_END)) {
-                methodSignureBuilder.append(methodSigure.substring(index + 1, methodSigure.indexOf(Constants.PACKNAME_END, index)).replaceAll("/", "\\."));
+            if (Constants.PACKNAME_START.equals(String.valueOf(methodSigure.charAt(index))) &&
+                    methodSigure.contains(Constants.PACKNAME_END)) {
+                methodSignureBuilder.append(methodSigure.substring(index + 1, methodSigure.indexOf(Constants.PACKNAME_END, index))
+                        .replaceAll("/", "\\."));
                 if (isArray) {
                     methodSignureBuilder.append("[]");
                     isArray = false;
@@ -356,17 +381,21 @@ public class SmaliTool {
             methodSignureBuilder.deleteCharAt(methodSignureBuilder.toString().length() - 1);
         methodSignureBuilder.append(")");
         String obscuredMethodSignure = methodSignureBuilder.toString();
-        String obscuredMethodName = getObscuredMemberName(className, ReadMapping.getInstance().getMethodSignureWithReturnType(returnTypeList.get(0), obscuredMethodSignure));
+        String obscuredMethodName = getObscuredMemberName(className,
+                ReadMapping.getInstance().getMethodSignureWithReturnType(returnTypeList.get(0), obscuredMethodSignure));
         obscuredMethodSignure = obscuredMethodName + parameter;
-//        System.out.println("getObscuredMethodSignure is "+obscuredMethodSignure.substring(0, obscuredMethodSignure.indexOf("(")) + parameter);
+        //        System.out.println("getObscuredMethodSignure is "+obscuredMethodSignure.substring(0, obscuredMethodSignure
+        //        .indexOf("(")) + parameter);
         return obscuredMethodSignure.substring(0, obscuredMethodSignure.indexOf("(")) + parameter;
     }
 
     private List<String> gePackageNameFromSmaliLine(String smaliLine) {
         List<String> packageNameList = new ArrayList<>();
         for (int index = 0; index < smaliLine.length(); index++) {
-            if (Constants.PACKNAME_START.equals(String.valueOf(smaliLine.charAt(index))) && smaliLine.indexOf(Constants.PACKNAME_END) != -1) {
-                packageNameList.add(smaliLine.substring(index + 1, smaliLine.indexOf(Constants.PACKNAME_END, index)).replaceAll("/", "\\."));
+            if (Constants.PACKNAME_START.equals(String.valueOf(smaliLine.charAt(index))) &&
+                    smaliLine.indexOf(Constants.PACKNAME_END) != -1) {
+                packageNameList.add(
+                        smaliLine.substring(index + 1, smaliLine.indexOf(Constants.PACKNAME_END, index)).replaceAll("/", "\\."));
                 index = smaliLine.indexOf(";", index);
             }
             if (Constants.PRIMITIVE_TYPE.contains(String.valueOf(smaliLine.charAt(index)))) {
@@ -412,7 +441,8 @@ public class SmaliTool {
 
         ClassMapping classMapping = ReadMapping.getInstance().getClassMapping(className);
         if (classMapping == null) {
-            System.out.println("Warning: getObscuredMemberName  class  name " + className + "   member name is  " + memberName + "  robust can not find in mapping!!! ");
+            System.out.println("Warning: getObscuredMemberName  class  name " + className + "   member name is  " + memberName +
+                    "  robust can not find in mapping!!! ");
             return JavaUtils.eradicatReturnType(memberName);
         }
 
@@ -422,7 +452,8 @@ public class SmaliTool {
             } else {
                 try {
                     CtClass superClass = classPool.get(classMapping.getClassName()).getSuperclass();
-                    while (ReadMapping.getInstance().getClassMapping(superClass.getName()) == null && !"java.lang.Object".equals(superClass.getName())) {
+                    while (ReadMapping.getInstance().getClassMapping(superClass.getName()) == null &&
+                            !"java.lang.Object".equals(superClass.getName())) {
                         superClass = superClass.getSuperclass();
                     }
                     classMapping = ReadMapping.getInstance().getClassMapping(superClass.getName());

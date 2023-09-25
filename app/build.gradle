@@ -8,8 +8,8 @@ android {
     buildToolsVersion '28.0.2'
     defaultConfig {
         applicationId "com.meituan.robust.sample"
-        minSdkVersion 14
-        targetSdkVersion 26
+        minSdkVersion 19
+        targetSdkVersion 30
         versionCode 1
         versionName "1.0"
     }
@@ -69,7 +69,7 @@ dependencies {
     implementation(group: 'androidx.appcompat', name: 'appcompat', version: '1.1.0')
     implementation 'com.squareup.okhttp:okhttp:2.5.0'
     implementation 'com.google.code.gson:gson:2.3.1'
-    implementation 'org.javassist:javassist:3.27.0-GA'
+    implementation 'org.javassist:javassist:3.29.0-GA'
     implementation project(path: ':patch')
 }
 

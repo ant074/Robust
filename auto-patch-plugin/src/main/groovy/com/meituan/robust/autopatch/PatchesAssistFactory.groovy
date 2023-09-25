@@ -11,7 +11,7 @@ class PatchesAssistFactory {
         CtClass assistClass = Config.classPool.getOrNull(NameManger.getInstance().getAssistClassName(patchClassName))
         if (assistClass == null) {
             assistClass = Config.classPool.makeClass(NameManger.getInstance().getAssistClassName(patchClassName))
-            assistClass.getClassFile().setMajorVersion(ClassFile.JAVA_7);
+            assistClass.getClassFile().setMajorVersion(ClassFile.JAVA_8);
             if (modifiedClass.getSuperclass() != null)
                 assistClass.setSuperclass(modifiedClass.getSuperclass())
         }
@@ -36,6 +36,7 @@ class PatchesAssistFactory {
         assistClass.addMethod(ctMethod);
         List<CtMethod> superList = Config.invokeSuperMethodMap.getOrDefault(NameManger.getInstance().getAssistClassName(patchClassName), new ArrayList());
         superList.add(removeMethod)
+        System.out.println("====================patchClassName="+patchClassName+", all = "+(NameManger.getInstance().getAssistClassName(patchClassName)))
         Config.invokeSuperMethodMap.put(NameManger.getInstance().getAssistClassName(patchClassName), superList);
         return assistClass;
     }

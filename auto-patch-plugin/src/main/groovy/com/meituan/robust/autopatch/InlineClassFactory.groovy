@@ -27,48 +27,76 @@ class InlineClassFactory {
     }
 
     def dealInLineClass(String patchPath) {
+        System.out.println("dealInLineClass a")
         //pay attention to order
         Set usedClass = new HashSet();
         usedClass.addAll(Config.newlyAddedClassNameList);
+        System.out.println("dealInLineClass b")
         Set newlyAddedClassInlineSet = getAllInlineClasses(usedClass, null);
+        System.out.println("dealInLineClass c")
         usedClass.addAll(newlyAddedClassInlineSet);
         usedClass.addAll(Config.modifiedClassNameList)
+        System.out.println("dealInLineClass d")
         Set inLineClassNameSet = getAllInlineClasses(usedClass, Config.patchMethodSignatureSet);
+        System.out.println("dealInLineClass e")
         inLineClassNameSet.removeAll(newlyAddedClassInlineSet)
+        System.out.println("dealInLineClass f")
         inLineClassNameSet.addAll(classInLineMethodsMap.keySet())
+        System.out.println("dealInLineClass g")
         //all inline patch class
         createHookInlineClass(inLineClassNameSet)
+        System.out.println("dealInLineClass h")
         //针对修改类的linepatch
         for (String fullClassName : inLineClassNameSet) {
+            System.out.println("dealInLineClass i:"+fullClassName)
             CtClass inlineClass = Config.classPool.get(fullClassName);
+            System.out.println("dealInLineClass j")
             List<String> inlineMethod = classInLineMethodsMap.getOrDefault(fullClassName, new ArrayList<String>());
+            System.out.println("dealInLineClass k")
             CtClass inlinePatchClass = PatchesFactory.createPatch(patchPath, inlineClass, true, NameManger.getInstance().getInlinePatchName(inlineClass.name), inlineMethod.toSet())
+            System.out.println("dealInLineClass l")
             inlinePatchClass.writeFile(patchPath)
+            System.out.println("dealInLineClass m")
         }
     }
 
 
     def dealInLineMethodInNewAddClass(String patchPath, List newAddClassList) {
+        System.out.println("dealInLineMethodInNewAddClass 1")
         for (String fullClassName : newAddClassList) {
+            System.out.println("dealInLineMethodInNewAddClass 2："+fullClassName)
             CtClass newlyAddClass = Config.classPool.get(fullClassName);
+            System.out.println("dealInLineMethodInNewAddClass 3")
             newlyAddClass.defrost();
+            System.out.println("dealInLineMethodInNewAddClass 4")
             newlyAddClass.declaredMethods.each { method ->
+                System.out.println("dealInLineMethodInNewAddClass 5:"+method)
                 method.instrument(new ExprEditor() {
                     public void edit(MethodCall m) throws CannotCompileException {
+                        System.out.println("dealInLineMethodInNewAddClass 6:"+method)
                         repalceInlineMethod(m, method, true);
+                        System.out.println("dealInLineMethodInNewAddClass 7 end")
                     }
                 })
             }
+            System.out.println("dealInLineMethodInNewAddClass 8")
             newlyAddClass.writeFile(patchPath);
+            System.out.println("dealInLineMethodInNewAddClass 9")
         }
     }
 
     def createHookInlineClass(Set inLineClassNameSet) {
+        System.out.println("createHookInlineClass 1")
         for (String fullClassName : inLineClassNameSet) {
+            System.out.println("createHookInlineClass 2:"+fullClassName)
             CtClass inlineClass = Config.classPool.get(fullClassName);
+            System.out.println("createHookInlineClass 3:"+inlineClass)
             CtClass inlinePatchClass = PatchesFactory.cloneClass(inlineClass, NameManger.getInstance().getInlinePatchName(inlineClass.name), null)
+            System.out.println("createHookInlineClass 4:"+inlinePatchClass)
             inlinePatchClass = JavaUtils.addPatchConstruct(inlinePatchClass, inlineClass)
+            System.out.println("createHookInlineClass 5:"+inlinePatchClass)
             PatchesFactory.createPublicMethodForPrivate(inlinePatchClass)
+            System.out.println("createHookInlineClass 6")
         }
     }
 /***
@@ -92,8 +120,11 @@ class InlineClassFactory {
     }
 
     public static void dealInLineClass(String patchPath, List list) {
+        System.out.println("dealInLineClass patchPath="+patchPath)
         inlineClassFactory.dealInLineClass(patchPath);
+        System.out.println("dealInLineClass 2")
         inlineClassFactory.dealInLineMethodInNewAddClass(patchPath, list);
+        System.out.println("dealInLineClass 3")
     }
     /**
      *
@@ -101,19 +132,23 @@ class InlineClassFactory {
      * @return all inline classes used in classNameList
      */
     def HashSet initInLineClass(Set classNamesSet, Set patchMethodSignureSet) {
+        System.out.println("initInLineClass1")
         HashSet inLineClassNameSet = new HashSet<String>();
         CtClass modifiedCtclass;
         Set <String>allPatchMethodSignureSet = new HashSet();
         boolean isNewClass=false;
+        System.out.println("initInLineClass2")
         for (String fullClassName : classNamesSet) {
             if(patchMethodSignureSet!=null) {
                 allPatchMethodSignureSet.addAll(patchMethodSignureSet);
             } else{
                 isNewClass=true;
             }
+            System.out.println("initInLineClass3："+fullClassName)
             modifiedCtclass = Config.classPool.get(fullClassName)
             modifiedCtclass.declaredMethods.each {
                 method ->
+                    System.out.println("initInLineClass4："+method)
                     //找出modifiedclass中所有内联的类
                     allPatchMethodSignureSet.addAll(classInLineMethodsMap.getOrDefault(fullClassName, new ArrayList()))
                     if (isNewClass||allPatchMethodSignureSet.contains(method.longName)) {
@@ -121,13 +156,19 @@ class InlineClassFactory {
                         method.instrument(new ExprEditor() {
                             @Override
                             void edit(MethodCall m) throws CannotCompileException {
+                                System.out.println("initInLineClass5："+m.method.declaringClass.name)
                                 List inLineMethodList = classInLineMethodsMap.getOrDefault(m.method.declaringClass.name, new ArrayList());
+                                System.out.println("initInLineClass6")
                                 ClassMapping classMapping = ReadMapping.getInstance().getClassMapping(m.method.declaringClass.name);
+                                System.out.println("initInLineClass7")
                                 if (null != classMapping && classMapping.memberMapping.get(ReflectUtils.getJavaMethodSignureWithReturnType(m.method)) == null) {
                                         inLineClassNameSet.add(m.method.declaringClass.name);
+                                    System.out.println("initInLineClass8")
                                     if (!inLineMethodList.contains(m.method.longName)) {
+                                        System.out.println("initInLineClass9:"+m.method.longName)
                                         inLineMethodList.add(m.method.longName);
                                         classInLineMethodsMap.put(m.method.declaringClass.name, inLineMethodList)
+                                        System.out.println("initInLineClass10")
                                     }
                                 }
                             }

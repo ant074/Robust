@@ -2,9 +2,12 @@
 
 buildscript {
     repositories {
-        mavenLocal()
-        jcenter()
-        google()
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url 'https://jitpack.io' }
+        mavenCentral()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:4.0.1'
@@ -39,8 +42,13 @@ task clean(type: Delete) {
 }
 
 ext {
+    compileSdkVersion = 28
+    buildToolsVersion = '28.0.3'
+    targetSdkVersion = 26
+    minSdkVersion = 19
+
     mavenGlobalUrl = "http://192.168.3.241:8081/repository/maven-releases/"
     mavenGroupId = "me.ddkj.lib"
     mavenName = "admin"
-    mavenPwd = "xxxx" //请参考lib_common
+    mavenPwd = "Bnic2SLEf" //请参考lib_common
 }
